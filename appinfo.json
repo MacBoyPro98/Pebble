@@ -1,0 +1,33 @@
+{
+    "resources": {
+        "media": [
+            {
+                "menuIcon": true,
+                "name": "IMAGE_DRIVE",
+                "file": "images/drive.png",
+                "type": "png"
+            },
+            {
+                "name": "FONT_IMAGINE_BOLD_42",
+                "file": "fonts/imagine.ttf",
+                "type": "font"
+            }
+        ]
+    },
+    "longName": "Pebble Drive",
+    "appKeys": {
+        "KEY_TEMPERATURE": 1,
+        "KEY_LOCATION": 0
+    },
+    "watchapp": {
+        "watchface": true
+    },
+    "versionLabel": "1.0",
+    "shortName": "Drive",
+    "companyName": "macboypro98@icloud.com",
+    "capabilities": [
+        "location"
+    ],
+    "versionCode": 1,
+    "uuid": "151dd42e-a678-49bd-b0d8-e15f5af29823"
+}
