@@ -1,13 +1,13 @@
 #include <pebble.h>
  
 Window* window;
-TextLayer *date_layer, *location_layer, *temperature_layer, *time_layer;
+TextLayer *date_layer, *location_layer, *temp_layer, *time_layer, *battery_layer;
 
-char date_buffer[32], location_buffer[64], temperature_buffer[32], time_buffer[32];
+char date_buffer[32], location_buffer[64], temp_buffer[32], time_buffer[32];
 
 enum {
 	KEY_LOCATION = 0,
-	KEY_TEMPERATURE = 1,
+	temperature = 3,
 };
 
 void process_tuple(Tuple *t)
@@ -29,10 +29,10 @@ void process_tuple(Tuple *t)
 			snprintf(location_buffer, sizeof("Location: couldbereallylongname"), "%s", string_value);
 			text_layer_set_text(location_layer, (char*) &location_buffer);
 			break;
-		case KEY_TEMPERATURE:
+		case temperature:
 			//Temperature received
-			snprintf(temperature_buffer, sizeof("Temperature: XX \u00B0C"), "%d\u00B0F", value);
-			text_layer_set_text(temperature_layer, (char*) &temperature_buffer);
+			snprintf(temp_buffer, sizeof("Temperature: XX \u00B0C"), "%d\u00B0F", value);
+			text_layer_set_text(temp_layer, (char*) &temp_buffer);
 			break;
 	}
   
@@ -81,7 +81,7 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
     
     static char time_text[] = "00:00";
     static char date_text[] = "Mon, Jan 31";
-    
+  
     strftime(time_text, sizeof(time_text), "%r", tick_time);
     text_layer_set_text(time_layer, time_text);
     
@@ -89,6 +89,30 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
     text_layer_set_text(date_layer, date_text);
 }
 
+static void handle_battery(BatteryChargeState charge_state) {
+  static char battery_text[] = "\uf004 \uf004 \uf004 \uf004 \uf0e7";
+  static char charge_text[] = "Charging";
+
+  if (charge_state.charge_percent > 75) {
+    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf004 \uf004");
+  } else if (charge_state.charge_percent > 50) {
+    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf004 \uf08a");
+  } else if (charge_state.charge_percent > 25) {
+    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf08a \uf08a");
+  } else if (charge_state.charge_percent > 0) {
+    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf08a \uf08a \uf08a");
+  } else {
+    snprintf(battery_text, sizeof(battery_text), "\uf08a \uf08a \uf08a \uf08a");
+  }
+  
+  if (charge_state.is_charging) {
+    snprintf(charge_text, sizeof(charge_text), "\uf0e7");
+  } else {
+    snprintf(charge_text, sizeof(charge_text), "   ");
+  }
+  
+  text_layer_set_text(battery_layer, battery_text);
+}
 
 void window_load(Window *window)
 {
@@ -98,24 +122,27 @@ void window_load(Window *window)
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(date_layer));
   text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
   
-  location_layer = init_text_layer(GRect(0, 76, 144, 30), GColorBlack, GColorWhite, "FONT_KEY_GOTHIC_28_BOLD", GTextAlignmentLeft);
-	text_layer_set_text(location_layer, "Location");
-  text_layer_set_font(location_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-	layer_add_child(window_get_root_layer(window), text_layer_get_layer(location_layer));
-  text_layer_set_text_alignment(location_layer, GTextAlignmentCenter);
-
-	temperature_layer = init_text_layer(GRect(0, 109, 144, 75), GColorWhite, GColorBlack, "FONT_KEY_GOTHIC_28_BOLD", GTextAlignmentLeft);
-	text_layer_set_text(temperature_layer, "N/A");
-  text_layer_set_font(temperature_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
-	layer_add_child(window_get_root_layer(window), text_layer_get_layer(temperature_layer));
-  text_layer_set_text_alignment(temperature_layer, GTextAlignmentCenter);
+  battery_layer = text_layer_create(GRect(0, 76, 144, 30));
+  text_layer_set_text(battery_layer, "\uf004 \uf004 \uf004 \uf004");
+  text_layer_set_text_color(battery_layer, GColorBlack);
+  text_layer_set_background_color(battery_layer, GColorWhite);
+  text_layer_set_font(battery_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(battery_layer, GTextAlignmentCenter);
+  layer_add_child(window_get_root_layer(window), text_layer_get_layer(battery_layer));
+  
+  temp_layer = text_layer_create(GRect(0, 96, 144, 50));
+  text_layer_set_text(temp_layer, "N/A");
+  text_layer_set_text_color(temp_layer, GColorWhite);
+  text_layer_set_background_color(temp_layer, GColorBlack);
+  text_layer_set_font(temp_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
+  layer_add_child(window_get_root_layer(window), text_layer_get_layer(temp_layer));
+  text_layer_set_text_alignment(temp_layer, GTextAlignmentCenter);
 }
  
 void window_unload(Window *window)
 {	
   text_layer_destroy(date_layer);
-	text_layer_destroy(location_layer);
-	text_layer_destroy(temperature_layer);
+	text_layer_destroy(temp_layer);
 	text_layer_destroy(time_layer);
 }
 
@@ -156,6 +183,7 @@ void init()
 
 	//Register to receive minutely updates
 	tick_timer_service_subscribe(MINUTE_UNIT, tick_callback);
+  battery_state_service_subscribe(&handle_battery);
 
 	window_stack_push(window, true);
   
@@ -165,7 +193,7 @@ void init()
     text_layer_set_background_color(time_layer, GColorWhite);
     text_layer_set_font(time_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
     text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
-    
+      
     // Ensures time is displayed immediately (will break if NULL tick event accessed).
     // (This is why it's a good idea to have a separate routine to do the update itself.)
     time_t now = time(NULL);
@@ -179,7 +207,12 @@ void init()
 void deinit()
 {
 	tick_timer_service_unsubscribe();
+  battery_state_service_unsubscribe();
 
+  text_layer_destroy(time_layer);
+  text_layer_destroy(date_layer);
+  text_layer_destroy(temp_layer);
+  text_layer_destroy(battery_layer);
 	window_destroy(window);
 }
  
