@@ -1,33 +1,33 @@
 {
-    "longName": "Pebble Drive",
-    "versionCode": 1,
-    "shortName": "Drive",
-    "capabilities": [
-        "location"
-    ],
-    "resources": {
-        "media": [
-            {
-                "type": "png",
-                "file": "images/drive.png",
-                "name": "IMAGE_DRIVE",
-                "menuIcon": true
-            },
-            {
-                "type": "font",
-                "file": "fonts/imagine.ttf",
-                "name": "FONT_IMAGINE_BOLD_42"
-            }
-        ]
-    },
-    "versionLabel": "1.1",
-    "watchapp": {
-        "watchface": true
-    },
-    "uuid": "151dd42e-a678-49bd-b0d8-e15f5af29823",
     "appKeys": {
         "KEY_LOCATION": 0,
         "temperature": 3
     },
-    "companyName": "macboypro98@icloud.com"
+    "versionLabel": "1.1.2",
+    "versionCode": 1,
+    "shortName": "Drive",
+    "companyName": "macboypro98@icloud.com",
+    "watchapp": {
+        "watchface": true
+    },
+    "longName": "Pebble Drive",
+    "resources": {
+        "media": [
+            {
+                "file": "images/drive.png",
+                "type": "png",
+                "name": "IMAGE_DRIVE",
+                "menuIcon": true
+            },
+            {
+                "file": "fonts/imagine.ttf",
+                "type": "font",
+                "name": "FONT_IMAGINE_BOLD_42"
+            }
+        ]
+    },
+    "uuid": "151dd42e-a678-49bd-b0d8-e15f5af29823",
+    "capabilities": [
+        "location"
+    ]
 }

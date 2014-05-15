@@ -90,23 +90,25 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
 }
 
 static void handle_battery(BatteryChargeState charge_state) {
-  static char battery_text[] = "\uf004 \uf004 \uf004 \uf004 \uf0e7";
+  static char battery_text[] = "Percentage";
   static char charge_text[] = "Charging";
 
-  if (charge_state.charge_percent > 75) {
-    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf004 \uf004");
-  } else if (charge_state.charge_percent > 50) {
-    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf004 \uf08a");
-  } else if (charge_state.charge_percent > 25) {
-    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf004 \uf08a \uf08a");
-  } else if (charge_state.charge_percent > 0) {
-    snprintf(battery_text, sizeof(battery_text), "\uf004 \uf08a \uf08a \uf08a");
+  if (charge_state.charge_percent > 90) {
+    snprintf(battery_text, sizeof(battery_text), "Batt: 100");
+  } else if (charge_state.charge_percent > 79) {
+    snprintf(battery_text, sizeof(battery_text), "Batt: 80");
+  } else if (charge_state.charge_percent > 59) {
+    snprintf(battery_text, sizeof(battery_text), "Batt: 60");
+  } else if (charge_state.charge_percent > 39) {
+    snprintf(battery_text, sizeof(battery_text), "Batt: 40");
+  } else if (charge_state.charge_percent > 19) {
+    snprintf(battery_text, sizeof(battery_text), "Batt: 20");
   } else {
-    snprintf(battery_text, sizeof(battery_text), "\uf08a \uf08a \uf08a \uf08a");
+    snprintf(battery_text, sizeof(battery_text), "N/A");
   }
   
   if (charge_state.is_charging) {
-    snprintf(charge_text, sizeof(charge_text), "\uf0e7");
+    snprintf(charge_text, sizeof(charge_text), "charging");
   } else {
     snprintf(charge_text, sizeof(charge_text), "   ");
   }
@@ -123,14 +125,14 @@ void window_load(Window *window)
   text_layer_set_text_alignment(date_layer, GTextAlignmentCenter);
   
   battery_layer = text_layer_create(GRect(0, 76, 144, 30));
-  text_layer_set_text(battery_layer, "\uf004 \uf004 \uf004 \uf004");
+  text_layer_set_text(battery_layer, "Batt: ");
   text_layer_set_text_color(battery_layer, GColorBlack);
   text_layer_set_background_color(battery_layer, GColorWhite);
   text_layer_set_font(battery_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(battery_layer, GTextAlignmentCenter);
   layer_add_child(window_get_root_layer(window), text_layer_get_layer(battery_layer));
   
-  temp_layer = text_layer_create(GRect(0, 96, 144, 50));
+  temp_layer = text_layer_create(GRect(0, 111, 144, 50));
   text_layer_set_text(temp_layer, "N/A");
   text_layer_set_text_color(temp_layer, GColorWhite);
   text_layer_set_background_color(temp_layer, GColorBlack);
@@ -144,6 +146,8 @@ void window_unload(Window *window)
   text_layer_destroy(date_layer);
 	text_layer_destroy(temp_layer);
 	text_layer_destroy(time_layer);
+  text_layer_destroy(location_layer);
+  text_layer_destroy(battery_layer);
 }
 
 void send_int(uint8_t key, uint8_t cmd)
@@ -153,17 +157,15 @@ void send_int(uint8_t key, uint8_t cmd)
  	
  	Tuplet value = TupletInteger(key, cmd);
  	dict_write_tuplet(iter, &value);
- 	
- 	app_message_outbox_send();
 }
 
 void tick_callback(struct tm *tick_time, TimeUnits units_changed)
 {
 	//Every five minutes
-	if(tick_time->tm_min % 5 == 0)
+	if(tick_time->tm_min % 1 == 0)
 	{
 		//Send an arbitrary message, the response will be handled by in_received_handler()
-		send_int(5, 5);
+		send_int(1, 1);
 	}
 }
  
@@ -182,7 +184,6 @@ void init()
 	app_message_open(512, 512);		//Large input and output buffer sizes
 
 	//Register to receive minutely updates
-	tick_timer_service_subscribe(MINUTE_UNIT, tick_callback);
   battery_state_service_subscribe(&handle_battery);
 
 	window_stack_push(window, true);
@@ -219,6 +220,7 @@ void deinit()
 int main(void)
 {
 	init();
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
 	app_event_loop();
 	deinit();
 }
