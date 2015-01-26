@@ -21,7 +21,7 @@ function getLocation()
 function getWeather(position)
 {
   var url = "http://api.openweathermap.org/data/2.5/weather?lat=" 
-  	+ position.coords.latitude + "&lon=" + position.coords.longitude;
+  + position.coords.latitude + "&lon=" + position.coords.longitude;
   console.log(url);
   var req = new XMLHttpRequest();
     req.open('GET', url, true);
@@ -36,6 +36,6 @@ function getWeather(position)
           console.log("Sent");
       } else { console.log("Error"); }
     }
-  }
+    }
   req.send(null);
 }

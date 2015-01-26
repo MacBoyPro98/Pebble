@@ -1,6 +1,6 @@
 #include <pebble.h>
  
-Window* window;
+Window *window, *temp;
 TextLayer *date_layer, *location_layer, *temp_layer, *time_layer, *battery_layer;
 
 char date_buffer[32], location_buffer[64], temp_buffer[32], time_buffer[32];
@@ -75,7 +75,6 @@ static TextLayer* init_text_layer(GRect location, GColor colour, GColor backgrou
 
 	return layer;
 }
- 
 
 static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
     
@@ -90,29 +89,13 @@ static void handle_second_tick(struct tm* tick_time, TimeUnits units_changed) {
 }
 
 static void handle_battery(BatteryChargeState charge_state) {
-  static char battery_text[] = "Percentage";
-  static char charge_text[] = "Charging";
+  static char battery_text[15];
 
-  if (charge_state.charge_percent > 90) {
-    snprintf(battery_text, sizeof(battery_text), "Batt: 100");
-  } else if (charge_state.charge_percent > 79) {
-    snprintf(battery_text, sizeof(battery_text), "Batt: 80");
-  } else if (charge_state.charge_percent > 59) {
-    snprintf(battery_text, sizeof(battery_text), "Batt: 60");
-  } else if (charge_state.charge_percent > 39) {
-    snprintf(battery_text, sizeof(battery_text), "Batt: 40");
-  } else if (charge_state.charge_percent > 19) {
-    snprintf(battery_text, sizeof(battery_text), "Batt: 20");
-  } else {
-    snprintf(battery_text, sizeof(battery_text), "N/A");
-  }
-  
   if (charge_state.is_charging) {
-    snprintf(charge_text, sizeof(charge_text), "charging");
+    snprintf(battery_text, sizeof(battery_text), "charging");
   } else {
-    snprintf(charge_text, sizeof(charge_text), "   ");
+    snprintf(battery_text, sizeof(battery_text), "Batt: %d%%", charge_state.charge_percent);
   }
-  
   text_layer_set_text(battery_layer, battery_text);
 }
 
@@ -140,14 +123,15 @@ void window_load(Window *window)
   layer_add_child(window_get_root_layer(window), text_layer_get_layer(temp_layer));
   text_layer_set_text_alignment(temp_layer, GTextAlignmentCenter);
 }
- 
+
 void window_unload(Window *window)
 {	
+  tick_timer_service_unsubscribe();
+  battery_state_service_unsubscribe();
+  
   text_layer_destroy(date_layer);
 	text_layer_destroy(temp_layer);
-	text_layer_destroy(time_layer);
   text_layer_destroy(location_layer);
-  text_layer_destroy(battery_layer);
 }
 
 void send_int(uint8_t key, uint8_t cmd)
@@ -157,6 +141,8 @@ void send_int(uint8_t key, uint8_t cmd)
  	
  	Tuplet value = TupletInteger(key, cmd);
  	dict_write_tuplet(iter, &value);
+ 	
+ 	app_message_outbox_send();
 }
 
 void tick_callback(struct tm *tick_time, TimeUnits units_changed)
@@ -178,13 +164,11 @@ void init()
 		.unload = window_unload
 	};
 	window_set_window_handlers(window, handlers);
+  window_set_fullscreen(window, true);
 
 	//Register AppMessage events
 	app_message_register_inbox_received(in_received_handler);					 
 	app_message_open(512, 512);		//Large input and output buffer sizes
-
-	//Register to receive minutely updates
-  battery_state_service_subscribe(&handle_battery);
 
 	window_stack_push(window, true);
   
@@ -199,28 +183,23 @@ void init()
     // (This is why it's a good idea to have a separate routine to do the update itself.)
     time_t now = time(NULL);
     struct tm *current_time = localtime(&now);
+    handle_battery(battery_state_service_peek());
     handle_second_tick(current_time, SECOND_UNIT);
     tick_timer_service_subscribe(SECOND_UNIT, &handle_second_tick);
+    battery_state_service_subscribe(&handle_battery);
     
     layer_add_child(window_get_root_layer(window), text_layer_get_layer(time_layer));
 }
  
 void deinit()
 {
-	tick_timer_service_unsubscribe();
-  battery_state_service_unsubscribe();
-
-  text_layer_destroy(time_layer);
-  text_layer_destroy(date_layer);
-  text_layer_destroy(temp_layer);
   text_layer_destroy(battery_layer);
-	window_destroy(window);
+  text_layer_destroy(time_layer);
 }
- 
+
 int main(void)
 {
 	init();
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
 	app_event_loop();
 	deinit();
 }
